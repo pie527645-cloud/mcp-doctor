@@ -80,10 +80,6 @@ const EXFILTRATION_PATTERNS: readonly PatternDetector[] = [
     regex: /(?:~|\$HOME|%USERPROFILE%)[/\\]\.aws\b|\.aws[/\\](?:credentials|config)\b/i,
   },
   {
-    label: 'dotenv file reference (.env)',
-    regex: /(?:^|[\s'"`/\\(])\.env(?:\.[A-Za-z0-9_-]+)?(?=$|[\s'"`,.;:)])/i,
-  },
-  {
     label: 'system password file reference (/etc/passwd or /etc/shadow)',
     regex: /\/etc\/(?:passwd|shadow)\b/i,
   },
@@ -102,6 +98,18 @@ const EXFILTRATION_PATTERNS: readonly PatternDetector[] = [
       /\b(?:include|append|embed|encode|forward|send)\s+(?:any\s+|all\s+|the\s+|user'?s?\s+)?(?:api[_ -]?keys?|bearer\s+tokens?|secret[_ -]?keys?|ssh\s+keys?|auth(?:entication)?\s+tokens?)\b/i,
   },
 ];
+
+/** Exact dotenv template/schema filenames downgraded to `info` severity for MCP104. */
+export const SAFE_DOTENV_FILENAMES: ReadonlySet<string> = new Set([
+  '.env.example',
+  '.env.sample',
+  '.env.template',
+  '.env.schema',
+  '.env.schema.json',
+]);
+
+const DOTENV_TOKEN_REGEX =
+  /(?:^|[\s'"`/\\(])(\.env(?:\.[A-Za-z0-9_-]+)*)(?=$|[\s'"`,;:)]|\.(?:$|[\s'"`,;:)]))/gi;
 
 const CROSS_TOOL_SHADOWING_PATTERNS: readonly PatternDetector[] = [
   {
@@ -250,6 +258,24 @@ function scanTextForPoisoning(
       firstExfilSnippet ??= match[0];
     }
   }
+
+  // Evaluate every dotenv token so benign template/schema names never mask real .env files.
+  const sensitiveDotenv: string[] = [];
+  const safeDotenv: string[] = [];
+  for (const match of text.matchAll(DOTENV_TOKEN_REGEX)) {
+    const token = match[1];
+    if (!token) continue;
+    if (SAFE_DOTENV_FILENAMES.has(token.toLowerCase())) {
+      safeDotenv.push(token);
+    } else {
+      sensitiveDotenv.push(token);
+    }
+  }
+  if (sensitiveDotenv.length > 0) {
+    exfilHits.push('dotenv file reference (.env)');
+    firstExfilSnippet ??= sensitiveDotenv[0];
+  }
+
   if (exfilHits.length > 0) {
     findings.push(
       createFinding({
@@ -257,6 +283,19 @@ function scanTextForPoisoning(
         message: `Detected sensitive file or credential exfiltration reference(s) in ${baseLocation.field ?? 'metadata'}: ${exfilHits.join('; ')}.`,
         location: baseLocation,
         ...(firstExfilSnippet !== undefined ? { evidence: truncateEvidence(firstExfilSnippet) } : {}),
+      }),
+    );
+  } else if (safeDotenv.length > 0) {
+    const uniqueSafe = [...new Set(safeDotenv)];
+    findings.push(
+      createFinding({
+        ruleId: 'MCP104',
+        severity: 'info',
+        message: `Detected benign dotenv template/schema reference(s) in ${baseLocation.field ?? 'metadata'}: ${uniqueSafe.join(', ')}.`,
+        location: baseLocation,
+        evidence: truncateEvidence(safeDotenv[0]!),
+        remediation:
+          'Benign dotenv template or schema filename reference; verify the tool does not read live .env secret values.',
       }),
     );
   }

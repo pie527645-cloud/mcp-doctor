@@ -12,7 +12,7 @@ import {
 } from './types.js';
 
 const VALID_FORMATS = new Set<OutputFormat>(['pretty', 'json', 'markdown', 'sarif']);
-const VALID_SEVERITIES = new Set<Severity>(['critical', 'high', 'medium', 'low']);
+const VALID_SEVERITIES = new Set<Severity>(['critical', 'high', 'medium', 'low', 'info']);
 
 /** Parsed CLI invocation arguments. */
 export interface ParsedCliArgs {
@@ -47,7 +47,7 @@ Inspect Target Flags:
 
 Global Options:
   --format <fmt>      Output format: pretty | json | markdown | sarif (default: pretty)
-  --fail-on <level>   Exit 1 if findings >= level: critical | high | medium | low (default: high)
+  --fail-on <level>   Exit 1 if findings >= level: critical | high | medium | low | info (default: high)
   -h, --help          Display this help message
   -v, --version       Display version number
 
@@ -133,7 +133,7 @@ export function parseCliArgs(argv: readonly string[]): ParsedCliArgs {
       i = consumed.nextIndex;
       if (!VALID_SEVERITIES.has(consumed.value as Severity)) {
         throw new CliUsageError(
-          `Invalid --fail-on "${consumed.value}". Expected one of: critical, high, medium, low.`,
+          `Invalid --fail-on "${consumed.value}". Expected one of: critical, high, medium, low, info.`,
         );
       }
       failOn = consumed.value as Severity;

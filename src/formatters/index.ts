@@ -79,6 +79,7 @@ function mapSarifLevel(severity: Severity): 'error' | 'warning' | 'note' {
     case 'medium':
       return 'warning';
     case 'low':
+    case 'info':
       return 'note';
   }
 }
@@ -93,6 +94,8 @@ function mapSecuritySeverityScore(severity: Severity): string {
       return '5.5';
     case 'low':
       return '3.0';
+    case 'info':
+      return '1.0';
   }
 }
 
@@ -251,7 +254,7 @@ export function formatPretty(report: AuditReport): string {
     lines.push('Findings: 0 issues detected.');
   } else {
     lines.push(
-      `Findings (${report.summary.total} total — critical: ${report.summary.critical}, high: ${report.summary.high}, medium: ${report.summary.medium}, low: ${report.summary.low}):`,
+      `Findings (${report.summary.total} total — critical: ${report.summary.critical}, high: ${report.summary.high}, medium: ${report.summary.medium}, low: ${report.summary.low}, info: ${report.summary.info}):`,
     );
     for (const finding of report.findings) {
       const badge = `[${finding.severity.toUpperCase()}]`.padEnd(10, ' ');
@@ -277,7 +280,7 @@ export function formatMarkdown(report: AuditReport): string {
   lines.push(`# mcp-doctor ${report.mode === 'scan' ? 'Config Scan' : 'Server Inspection'} Report`);
   lines.push('');
   lines.push(
-    `**Summary:** ${report.summary.total} finding(s) — Critical: **${report.summary.critical}**, High: **${report.summary.high}**, Medium: **${report.summary.medium}**, Low: **${report.summary.low}**`,
+    `**Summary:** ${report.summary.total} finding(s) — Critical: **${report.summary.critical}**, High: **${report.summary.high}**, Medium: **${report.summary.medium}**, Low: **${report.summary.low}**, Info: **${report.summary.info}**`,
   );
   lines.push('');
 

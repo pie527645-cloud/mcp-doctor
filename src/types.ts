@@ -5,7 +5,7 @@
 export const PACKAGE_VERSION = '1.0.0';
 
 /** Finding severity levels ordered from highest to lowest impact. */
-export type Severity = 'critical' | 'high' | 'medium' | 'low';
+export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
 
 /** Output formats supported by the CLI and formatters. */
 export type OutputFormat = 'pretty' | 'json' | 'markdown' | 'sarif';
@@ -16,6 +16,7 @@ export const SEVERITY_RANK: Readonly<Record<Severity, number>> = {
   high: 3,
   medium: 2,
   low: 1,
+  info: 0,
 };
 
 /** High-level classification category for security and quality findings. */
@@ -135,6 +136,7 @@ export interface FindingSummary {
   high: number;
   medium: number;
   low: number;
+  info: number;
   total: number;
 }
 
@@ -200,6 +202,7 @@ export function summarizeFindings(findings: readonly Finding[]): FindingSummary 
     high: 0,
     medium: 0,
     low: 0,
+    info: 0,
     total: findings.length,
   };
   for (const f of findings) {

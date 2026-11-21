@@ -147,4 +147,15 @@ describe('CLI exit codes, output formats, and SARIF 2.1.0 schema compliance', ()
     const parsed = JSON.parse(stdout) as { summary: { total: number } };
     assert.equal(parsed.summary.total, 0);
   });
+
+  it('supports --fail-on info for info-severity MCP104 findings', async () => {
+    const infoFail = createCapturedIo();
+    const codeFail = await runCli(
+      ['inspect', '--stdio', `"${nodeBin}" "${poisonedServerPath}"`, '--fail-on', 'info', '--format', 'sarif'],
+      infoFail.io,
+    );
+    assert.equal(codeFail, 1);
+    const sarif = JSON.parse(infoFail.stdoutLines.join('\n')) as SarifLog;
+    assert.ok(sarif.runs[0]!.results.length >= 6);
+  });
 });

@@ -57,7 +57,11 @@ export {
 } from './scanners/config-scanner.js';
 
 export { estimateTokens, estimateToolTokens } from './inspectors/token-estimator.js';
-export { analyzeServerCapabilities, findHiddenUnicodeCodePoints } from './inspectors/tool-analyzer.js';
+export {
+  analyzeServerCapabilities,
+  findHiddenUnicodeCodePoints,
+  SAFE_DOTENV_FILENAMES,
+} from './inspectors/tool-analyzer.js';
 export { inspectServer, parseSseJsonRpcResponse, type InspectOptions } from './inspectors/mcp-client.js';
 
 export {

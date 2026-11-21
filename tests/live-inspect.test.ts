@@ -5,11 +5,14 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  analyzeServerCapabilities,
   assertSafeHttpInspectionUrl,
   InspectionTargetError,
   inspectServer,
   isCloudMetadataOrLinkLocalIp,
   isPrivateOrLoopbackIp,
+  SAFE_DOTENV_FILENAMES,
+  summarizeFindings,
 } from '../src/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -217,5 +220,129 @@ describe('Live MCP server inspection (stdio & Streamable HTTP)', () => {
     } finally {
       await new Promise<void>((resolve) => redirectServer.close(() => resolve()));
     }
+  });
+
+  it('downgrades allowlisted dotenv template/schema filenames to info while keeping live .env refs critical', () => {
+    for (const allowedName of SAFE_DOTENV_FILENAMES) {
+      const { findings } = analyzeServerCapabilities({
+        tools: [
+          {
+            name: 'inspect_template',
+            description: `Reads ${allowedName} in workspace to check key documentation.`,
+            inputSchema: {
+              type: 'object',
+              properties: {
+                path: { type: 'string', description: `Relative path to ${allowedName}.` },
+              },
+            },
+          },
+        ],
+      });
+      const mcp104 = findings.filter((f) => f.ruleId === 'MCP104');
+      assert.equal(mcp104.length, 2, `Expected 2 info MCP104 findings for ${allowedName}`);
+      for (const f of mcp104) {
+        assert.equal(f.severity, 'info', `Expected ${allowedName} to be info severity`);
+      }
+    }
+
+    const sensitiveCases = [
+      'Reads .env in project root.',
+      'Reads .env.local credentials file.',
+      'Reads .env.production config.',
+      'Reads .env.example.local override.',
+      'Checks .env.example and .env together.',
+    ];
+    for (const desc of sensitiveCases) {
+      const { findings } = analyzeServerCapabilities({
+        tools: [
+          {
+            name: 'read_env_tool',
+            description: desc,
+            inputSchema: { type: 'object', properties: {} },
+          },
+        ],
+      });
+      const mcp104 = findings.filter((f) => f.ruleId === 'MCP104');
+      assert.equal(mcp104.length, 1, `Expected 1 critical MCP104 finding for: ${desc}`);
+      assert.equal(mcp104[0]?.severity, 'critical', `Expected critical severity for: ${desc}`);
+    }
+  });
+
+  it('matches env-guard-cli tool metadata cleanly after MCP104 dotenv allowlist refinement', () => {
+    const envGuardToolsFixture = [
+      {
+        name: 'list_env_keys',
+        description:
+          'List environment variable keys discovered across source code, .env.example, .env.schema.json, and .env presence flags within the workspace without exposing any values.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            subpath: {
+              type: 'string',
+              maxLength: 512,
+              description: 'Optional relative directory path inside the workspace root.',
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'check_env_drift',
+        description:
+          'Check workspace environment configuration for missing required variables, unused variables, undocumented keys, and redacted secret hygiene findings without exposing secret values.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            subpath: {
+              type: 'string',
+              maxLength: 512,
+              description: 'Optional relative directory path inside the workspace root.',
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+      {
+        name: 'validate_env_schema',
+        description:
+          'Validate workspace environment variables against a .env.schema.json specification and report rule compliance status without returning secret values.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            schemaPath: {
+              type: 'string',
+              maxLength: 512,
+              description: 'Optional relative path to .env.schema.json inside the workspace root.',
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+    ];
+
+    const { findings } = analyzeServerCapabilities({
+      serverName: 'env-guard',
+      tools: envGuardToolsFixture,
+    });
+    const summary = summarizeFindings(findings);
+
+    assert.equal(summary.critical, 1);
+    assert.equal(summary.high, 0);
+    assert.equal(summary.medium, 0);
+    assert.equal(summary.low, 0);
+    assert.equal(summary.info, 2);
+    assert.equal(summary.total, 3);
+
+    const listKeysFindings = findings.filter((f) => f.location.toolName === 'list_env_keys');
+    assert.equal(listKeysFindings.length, 1);
+    assert.equal(listKeysFindings[0]?.ruleId, 'MCP104');
+    assert.equal(listKeysFindings[0]?.severity, 'critical');
+
+    const driftFindings = findings.filter((f) => f.location.toolName === 'check_env_drift');
+    assert.equal(driftFindings.length, 0);
+
+    const validateFindings = findings.filter((f) => f.location.toolName === 'validate_env_schema');
+    assert.equal(validateFindings.length, 2);
+    assert.ok(validateFindings.every((f) => f.ruleId === 'MCP104' && f.severity === 'info'));
   });
 });
