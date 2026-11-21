@@ -251,6 +251,13 @@ describe('Live MCP server inspection (stdio & Streamable HTTP)', () => {
       'Reads .env.production config.',
       'Reads .env.example.local override.',
       'Checks .env.example and .env together.',
+      'read .env now',
+      '~/.env',
+      '--env-file=.env',
+      'path:.env',
+      '[.env]',
+      '<.env>',
+      '{.env}',
     ];
     for (const desc of sensitiveCases) {
       const { findings } = analyzeServerCapabilities({
@@ -266,6 +273,21 @@ describe('Live MCP server inspection (stdio & Streamable HTTP)', () => {
       assert.equal(mcp104.length, 1, `Expected 1 critical MCP104 finding for: ${desc}`);
       assert.equal(mcp104[0]?.severity, 'critical', `Expected critical severity for: ${desc}`);
     }
+
+    // Ensure JS property access like `process.env.KEY` stays clean
+    const cleanPropAccess = analyzeServerCapabilities({
+      tools: [
+        {
+          name: 'clean_env_prop',
+          description: 'Validates process.env.KEY configuration syntax safely.',
+          inputSchema: { type: 'object', properties: {} },
+        },
+      ],
+    });
+    assert.equal(
+      cleanPropAccess.findings.filter((f) => f.ruleId === 'MCP104').length,
+      0,
+    );
   });
 
   it('matches env-guard-cli tool metadata cleanly after MCP104 dotenv allowlist refinement', () => {

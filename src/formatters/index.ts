@@ -99,6 +99,14 @@ function mapSecuritySeverityScore(severity: Severity): string {
   }
 }
 
+function trimUnderscores(input: string): string {
+  let start = 0;
+  let end = input.length;
+  while (start < end && input.charCodeAt(start) === 95) start += 1;
+  while (end > start && input.charCodeAt(end - 1) === 95) end -= 1;
+  return start === 0 && end === input.length ? input : input.slice(start, end);
+}
+
 function resolveSarifUri(finding: Finding, report: AuditReport): string {
   if (finding.location.filePath) {
     const resolved = path.resolve(finding.location.filePath);
@@ -110,7 +118,7 @@ function resolveSarifUri(finding: Finding, report: AuditReport): string {
   }
 
   const rawTarget = finding.location.serverName ?? report.inspection?.serverInfo?.name ?? 'live-mcp-target';
-  const safeSlug = rawTarget.replace(/[^A-Za-z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '') || 'target';
+  const safeSlug = trimUnderscores(rawTarget.replace(/[^A-Za-z0-9_.-]+/g, '_')) || 'target';
   return `mcp-inspect/${safeSlug}.json`;
 }
 

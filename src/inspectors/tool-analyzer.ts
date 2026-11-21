@@ -50,15 +50,15 @@ const PROMPT_INJECTION_PATTERNS: readonly PatternDetector[] = [
   },
   {
     label: '<IMPORTANT> directive block',
-    regex: /<\s*\/?\s*important\b[^>]*>/i,
+    regex: /<\s*(?:\/\s*)?important\b[^>]*>/i,
   },
   {
     label: '<instructions> directive block',
-    regex: /<\s*\/?\s*instructions?\b[^>]*>/i,
+    regex: /<\s*(?:\/\s*)?instructions?\b[^>]*>/i,
   },
   {
     label: 'pseudo-system XML tag (<system> / <secret> / <hidden>)',
-    regex: /<\s*\/?\s*(?:system|system_prompt|secret|hidden|override)\b[^>]*>/i,
+    regex: /<\s*(?:\/\s*)?(?:system|system_prompt|secret|hidden|override)\b[^>]*>/i,
   },
   {
     label: 'user-concealment instruction ("do not tell the user")',
@@ -109,7 +109,7 @@ export const SAFE_DOTENV_FILENAMES: ReadonlySet<string> = new Set([
 ]);
 
 const DOTENV_TOKEN_REGEX =
-  /(?:^|[\s'"`/\\(])(\.env(?:\.[A-Za-z0-9_-]+)*)(?=$|[\s'"`,;:)]|\.(?:$|[\s'"`,;:)]))/gi;
+  /(?:^|[\s'"`/\\(=:[\<{,|])(\.env(?:\.[A-Za-z0-9_-]+)*)(?=$|[\s'"`,;:)[\]}>|]|\.(?:$|[\s'"`,;:)[\]}>|]))/gi;
 
 const CROSS_TOOL_SHADOWING_PATTERNS: readonly PatternDetector[] = [
   {
