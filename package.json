@@ -1,0 +1,56 @@
+{
+  "name": "@pie527645-cloud/mcp-doctor",
+  "version": "1.0.0",
+  "description": "Security, prompt-injection, tool-poisoning, configuration, and context-token-tax auditor for Model Context Protocol (MCP) servers.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pie527645-cloud/mcp-doctor.git"
+  },
+  "homepage": "https://github.com/pie527645-cloud/mcp-doctor#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "mcp-doctor": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/src",
+    "dist/cli.js",
+    "dist/cli.d.ts",
+    "dist/index.js",
+    "dist/index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/tests/argv-tokenizer.test.js dist/tests/cli-and-sarif.test.js dist/tests/config-scan.test.js dist/tests/live-inspect.test.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "security",
+    "prompt-injection",
+    "tool-poisoning",
+    "sarif",
+    "ai-security",
+    "llm",
+    "cli",
+    "auditor"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}
